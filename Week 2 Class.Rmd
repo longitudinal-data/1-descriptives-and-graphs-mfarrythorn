@@ -1,0 +1,19 @@
+---
+title: "Week 2 Class Code"
+author: "Molly Farry-Thorn"
+date: "August 31, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Packages
+
+```{r}
+library(plyr)
+library(tidyverse)
+library(psych)
+```
+
