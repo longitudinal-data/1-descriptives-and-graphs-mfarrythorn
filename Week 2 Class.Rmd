@@ -1,23 +1,22 @@
 ---
 title: "Week 2 Class Code"
 author: "Molly Farry-Thorn"
-date: "August 31, 2017"
-output: html_document
+date: "September 7, 2017"
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Packages
-
-```{r}
+```{r, include=FALSE}
 library(tidyverse)
 library(psych)
+library(tidyr)
+library(plyr)
 ```
 
 ```{r}
 letters <- read.delim("Masters coded letters.csv", header=TRUE, sep=",")
 
 ```
-
