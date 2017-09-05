@@ -19,10 +19,10 @@ library(plyr)
 letters <- read.delim("Masters coded letters.csv", header=TRUE, sep=",")
 long_to_wide <- unite(letters, "Participant", c("Subject","Speaker"))
 
-long_to_wide <- gather(long_to_wide, Var, Val, select=c("Age", "Length", "Utterances", "Utterances.with.Letters")) %>%
+long_to_wide <- gather(long_to_wide, Var, Val, select=c("Age", "Length", "Utterances", "Utterances.with.Letters", "Letter.name", "Letter.shape", "Letter.sound", "Spelling", "Child.name", "Other.name", "Names", "Letter.Teaching", "Not.Letter.Teaching")) %>%
     unite(VarG, Var, Session) %>%
     spread(VarG, Val)
-long_to_wide <- long_to_wide[,c(1:4,8:15,5:7,16,20:27,17:19,40,44:51,41:43,28,32:39,29:31)]
+long_to_wide <- long_to_wide[,c(1:14,18:25,15:17,26:169)]
 ```
 
 2. Create a wave variable and date variable (if applicable).
@@ -31,7 +31,9 @@ I have a variable for the session number and a variable for the child's exact ag
 
 3. What is your sample size for each wave of assessment?
 ```{r}
-ddply(letters, .(Session,Speaker), summarize, N = length(Speaker) )
+ddply(letters, .(Session,Speaker), summarize, N = length(Speaker))
+
+
 ```
 
 4. Take the date variable and convert it to a different date format such as time in study or age (if appropriate). What scale is most suitable for your analyses? (weeks/months/years?)
