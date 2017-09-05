@@ -1,0 +1,65 @@
+---
+title: "Week 1 Homework"
+author: "Molly Farry-Thorn"
+date: "September 4, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(psych)
+library(tidyr)
+library(plyr)
+```
+
+1. Move your data into a long format and a wide format. Did you have any specific challenges that you encountered? If so, discuss them.
+
+```{r}
+letters <- read.delim("Masters coded letters.csv", header=TRUE, sep=",")
+long_to_wide <- unite(letters, "Participant", c("Subject","Speaker"))
+
+long_to_wide <- gather(long_to_wide, Var, Val, select=c("Age", "Length", "Utterances", "Utterances.with.Letters")) %>%
+    unite(VarG, Var, Session) %>%
+    spread(VarG, Val)
+long_to_wide <- long_to_wide[,c(1:4,8:15,5:7,16,20:27,17:19,40,44:51,41:43,28,32:39,29:31)]
+```
+
+2. Create a wave variable and date variable (if applicable).
+
+I have a variable for the session number and a variable for the child's exact age. I don't have the dates of the sessions
+
+3. What is your sample size for each wave of assessment?
+```{r}
+ddply(letters, .(Session,Speaker), summarize, N = length(Speaker) )
+```
+
+4. Take the date variable and convert it to a different date format such as time in study or age (if appropriate). What scale is most suitable for your analyses? (weeks/months/years?)
+
+I don't have the dates of the sessions
+
+5. Graph your data using the different time metrics, fitting individual curves for each person.
+```{r}
+gg1 <- ggplot(letters,
+   aes(Session, Utterances.with.Letters, group = Subject, color = factor(Speaker))) + geom_line() +  geom_point() + facet_wrap( ~ Subject)
+gg1
+
+```
+6. Create an overall average trend of your data (split up into groups if appropriate). Attempt to color your individual data points and/or shade different lines (highlight some particiapnts, highlight the average trend line but not the individual level lines)
+```{r}
+gg2 <- ggplot(letters, aes(Session, Utterances.with.Letters, color = factor(Speaker))) + 
+       geom_point() + geom_smooth() 
+gg2
+
+
+gg3 <- ggplot(letters, aes(Session, Utterances, color = factor(Speaker))) + 
+       geom_point() + geom_smooth() 
+gg3
+```
+
+7. Look at the correlations of your DV across time
+```{r}
+func <- function(letters)
+{return(data.frame(CORR = cor(letters$Utterances, letters$Utterances.with.Letters)))}
+ddply(letters,.(Session), func)
+```
