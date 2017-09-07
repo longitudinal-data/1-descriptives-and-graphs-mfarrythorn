@@ -111,3 +111,6 @@ summary(mod.2)
 ```
 
 There is not a straighforward "variance explained" term
+Random effects index variability in starting value and change 
+Standard deviation of the random effects - Tau - Standard Devation your distribution of μs
+From the outcomes - the Std.Dev. of the random intercept (μ0j) 
