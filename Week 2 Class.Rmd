@@ -14,9 +14,100 @@ library(tidyverse)
 library(psych)
 library(tidyr)
 library(plyr)
+library(lme4)
 ```
 
 ```{r}
 letters <- read.delim("Masters coded letters.csv", header=TRUE, sep=",")
 
 ```
+Standard Deviation in SMN7 that is unexplained.
+Model reduced the amount of unexplained error
+Standard error of the estimate
+Average SMN7 enough, adding week doesn't add knowledge
+
+Major problem - violate basic assumption. Our observations are not related to each other. We can't do regression. We can't nesting, that there are multiple assessments per person. 
+We'll fit a similar model that accounts for person-specific 
+
+Multi-level longitudinal model - have average overall effect - typical trajectory and then additional data at the individual level.
+
+For each person we have a number of different residuals. Our model take these into account at a person-specific level. Random effects (Not fixed effects - standard linear regression - everybody assumed to have same relationship).
+
+The betas are not going to be the same for everyone
+Multiple i (assessments) in multiple j (participants)
+Not everyone has same association betweeen time and DV
+
+Level 1 - no predictor, just an intercept - similar to typical regression but different subscripts
+        - but the intercept can differ across individuals, beta can vary.
+        - the residuals are measurement error - we might be able to explain these with predictors
+Level 2 - breaks the intercept (the starting value) down into components. Why do people have different intercepts. 
+        - gamma is the fixed effect (the same for everyone). The average starting value. 
+        - mu is the error term for each person to get to their individual score. This is a random effect. The random effect is normally distributed with a mean of 0. We can look at sd of mu - how much variation is there around that starting value.
+We have 3 terms - residual has two parts. Random effect (difference in starting value) and the residual
+
+Intercept-only model
+-interclass correlation (ICC)
+  -% variation between people vs. within person variance
+  Is the variation due to differences between people or a lot of varying within people?
+  .15 or below, might not need MLM, but probably do it anyway
+
+Adding time adds a new predictor to level 1 and then you have 2 equations at Level 2
+Level 1 - takes repeated measures (the i). Not everyone has the same intercept or slope.
+Level 2 - only considers the js. Can omit the random effect - saying thateveryone has same relationship between predictor and DV. Or that everyone has the same starting value.
+
+We're using everyone's data to get better estimate of random effects
+Partial pooling - pulls super high, improbable slopes down.
+E and mu are uncorrelated 
+
+```{r}
+lmer(y ~ 1 + (1|Participants), data=letters)
+# 1 is the intercept 
+# Outside the parentheses is fixed effect. is gamma00
+# Within the parentheses - on the right of the pipe is the nesting varaible (group factor corresponding to the j term). To the left of the pipe is how you specifiy your random effects. The 1 means there is a random effect - different intercept for each participant - μoj)
+
+lmer(y ~ time + (time|subjects), data=letters)
+# is the same as:
+lmer(y ~ 1 + time + (1 + time|subjects), data=letters)
+# The 1 is implied unless you tell lmer 0 for the intercept - don't fit an intercept
+
+lmer(y ~ time + (|subjects), data=letters)
+# The effect of time is the same across subjects - you have taken out μij. Assuming fixed effects the same across participants - the slope the same.
+
+# Output:
+# Fixed effects Intercept is γ00 - variance due to individuals
+# Random effects have variance and standard deviations - they are the same measure
+# Intercept is μ0j - variance is the variance of μ0j - how much variabiltiy in the mean y value
+# Residual is Eij - we don't have a good reason why - variability within a person
+# Number of observations is how many repeated measures. groups tells you number of participant
+# ICC = μ0j/(μ0j+Eij) - bigger number - more difference between people - trait not state
+library(sjPlot)
+sjp.lmer(mod.1, facet.grid = FALSE, 
+          sort = "sort.all")
+# Graphing random effects (the μ0j term) - deviations around the fixed effect intercept - they have a mean of 0. Each random effect is just an estimate.
+# ranef - is μ0j
+# coef is the β0j - the fixed effect (γ00) plus the random effect (μ0j) for each person
+library(broom)
+example.aug<- augment(mod.1, data = example)
+# Takes individual level values. Tidy takes those in summary statement.Glance is R^2
+# .fitted   = predicted values (y hats)
+# .resid    = residuals/errors (eij)
+# .fixed    = predicted values with no random effects - at individual level
+```
+
+
+```{r}
+mod.2f <- lmer(SMN7 ~ 1 + week + (1  | ID), data=example)
+summary(mod.2f)
+# Fixed slope and fixed intercept. Random intercept but same slopes - parallel lines starting from different points
+# OUTPUT:
+# now we have γ10 in addition to γ00
+# Standard error of the regression (residual variance) - we want this to go to zero.
+# When we add a new term we want this to shrink.
+
+mod.2 <- lmer(SMN7 ~ 1 + week + (week  | ID), data=example)
+summary(mod.2)
+# Random slope μ1j added - people's differences from average/fixed effect slope. If large there are people going up and people goign down - lots of variability.
+# Intercept might change when time is added. Because now it is when time = 0 
+```
+
+There is not a straighforward "variance explained" term
