@@ -251,11 +251,11 @@ ggplot(p1.gg4, aes(mean)) +
 ```{r}
 p1 <- plotREsim(re.sim.p)
 p1
-# 75, 27
+# 75, 27, 85, 25
 
 p2 <- plotREsim(re.sim.c)
 p2
-#75, 25, 89
+#75, 25, 89, 51
 ```
 
 The listed participant numbers aboce have effect ranges for the intercept differ significantly from 0. However, by and large, standard errors around the intercept and slope values all seem to be within normal limits.
@@ -265,6 +265,13 @@ The listed participant numbers aboce have effect ranges for the intercept differ
 coefs <- data.frame(coef(model.4p)[[1]])
 
 ggplot(data = parents, aes(Session, Utterances.with.Letters)) +
+   stat_smooth(aes(Session, Utterances.with.Letters), method = lm, se = F) +
+   xlim(0,12) + ylim (-20,20) +
+  geom_abline(data = coefs, aes(slope = Session, intercept = X.Intercept.), alpha = 0.2)
+
+coefs <- data.frame(coef(model.4c)[[1]])
+
+ggplot(data = children, aes(Session, Utterances.with.Letters)) +
    stat_smooth(aes(Session, Utterances.with.Letters), method = lm, se = F) +
    xlim(0,12) + ylim (-20,20) +
   geom_abline(data = coefs, aes(slope = Session, intercept = X.Intercept.), alpha = 0.2)
