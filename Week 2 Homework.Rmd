@@ -9,25 +9,264 @@ output: pdf_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r, include=FALSE}
+library(tidyverse)
+library(psych)
+library(tidyr)
+library(plyr)
+library(lme4)
+library(ggplot2)
+letters <- read.delim("Masters coded letters.csv", header=TRUE, sep=",")
+parents <- subset(letters, Speaker==0)
+children <- subset(letters, Speaker==1)
+```
 
-1.Run linear models on all of your subjects (a basic regression). What is the average intercept, the average slope?
-
-2. Now run a mlm/lmer model with only a random intercept. What is the ICC? What does residual variance look like compared to linear model? Create a graph to show this effect.
-
-3. Introduce a fixed slope term. What is the difference in terms of the fixed effects estimates between this estimate and the previous? Of the residual standard error? Create a graph to show both fixed effects estimates and the CIs around them.
-
-4. Run an additional model with a random slope. How does this change compare to the previous model? Should you keep the random slope or not?
-
-5. Interpret the correlation between the slope and the intercept.
-
-6. Create a density plot of the random effects from your final model.
-
-7. Create a catepilar plot of the random effects. Is there any person that seems odd in terms of a large standard errors around intercept and slope estimates?
-
-8. Create a plot of the trajectory, along with a spaghetti plot of each person’s individual slope. Set the alpha level (transparency) on the individual slopes to make them easier to see.
-
-9. Create a plot of the trajectory, along with a spagehtti plot of each person’s individual slope. Set the alpha level (transperancy) on the individual slopes to make them easier to see.
-
+## 1. Run linear models on all of your subjects (a basic regression). What is the average intercept, the average slope?
 ```{r}
+model.1p <- lm(Utterances.with.Letters ~ Session, data=parents)
+summary(model.1p)
+(summary(model.1p)$sigma)**2
+
+model.1c <- lm(Utterances.with.Letters ~ Session, data=children)
+summary(model.1c)
+(summary(model.1c)$sigma)**2
 
 ```
+**For Parents:**
+
+Average intercept = 2.29 utterances with letters at Session 0 (around child age 10 months)
+
+Average slope = .74 utterances with letters every 4 months
+
+Residual variance = 332.2693
+
+**For Children:**
+
+Average intercept = 0.05  utterances with letters at Session 0 (around child age 10 months)
+
+Average slope = .88 utterances with letters every 4 months
+
+Residual variance = 254.5669
+
+
+## 2. Now run a mlm/lmer model with only a random intercept. What is the ICC? 
+```{r}
+model.2p <- lmer(Utterances.with.Letters ~ 1 + (1|Subject), data = parents)
+summary(model.2p)
+44.5/(44.5+294.1)
+
+model.2c <- lmer(Utterances.with.Letters ~ 1 + (1|Subject), data = children)
+summary(model.2c)
+22.43/(22.43+241.36)
+```
+**For Parents:**
+
+Average intercept = 7.37 utterances with letters
+
+Slope = we set it at 0
+
+
+Residual variance = 294.1
+
+ICC = 0.1314235
+
+
+**For Children:**
+
+Average intercept = 0.05 utterances with letters
+
+Slope = we set it at 0
+
+
+Residual variance = 241.36
+
+ICC = 0.08502976
+
+## What does residual variance look like compared to linear model? Create a graph to show this effect.
+```{r}
+#plotting residuals
+library(broom)
+lin.resid <- abs(augment(model.1p)[,c(5)])
+mean.lin.resid <- mean(lin.resid)
+sd.lin.resid <- sd(lin.resid)
+
+mlm.resid <- abs(augment(model.2p)[,c(4)])
+mean.mlm.resid  <- mean(mlm.resid)
+sd.mlm.resid <- sd(mlm.resid)
+
+
+dataframe <- data.frame("Type" = c("LinMod", "MLMMod"), 
+                        "Mean" = c(mean.lin.resid, mean.mlm.resid), "SD"= c(sd.lin.resid, sd.mlm.resid))
+
+ResidPlot <- ggplot(dataframe, aes(Type, Mean)) + 
+                   geom_col() +  
+                   geom_errorbar(aes(ymin = Mean - SD, ymax = Mean + SD), width=0.2)
+ResidPlot + labs(y="Average Residual (+/- SD)", x = "Type of Model") 
+```
+
+Residual variance (the variance not accounted for by the model) is smaller in the in the mixed-effect model compared to the linear model, even though the linear model uses age as a predictor whereas the MLM model does not.
+
+## 3. Introduce a fixed slope term. What is the difference in terms of the fixed effects estimates between this estimate and the previous? Of the residual standard error? 
+```{r}
+model.3p <- lmer(Utterances.with.Letters ~ 1 + Session + (1|Subject), data = parents)
+summary(model.3p)
+
+model.3c <- lmer(Utterances.with.Letters  ~ 1 + Session + (1|Subject), data = children)
+summary(model.3c)
+```
+**For Parents:**
+
+Average intercept = 2.55 utterances with letters at Session 0 (around child age 10 months) *(7.37 in model without age)*
+
+Average slope = .75 utterances with letters every 4 months *(.74 in linear model)*
+
+
+Residual variance = 287.38 *(294.1 in model without age)*
+
+**For Children:**
+
+Average intercept = 0.001  utterances with letters at Session 0 (around child age 10 months) *(0.05 in model without age)*
+
+Average slope = .89 utterances with letters every 4 months *(.88 in linear model)*
+
+
+Residual variance = 231.43 *(241.36 in model without age)*
+
+
+The fixed effect estimates of the intercept have decreased. The estimates of the slopes are about equal to those of the linear model. The residual error has decreased.
+
+## Create a graph to show both fixed effects estimates and the CIs around them.
+```{r}
+##FOR PARENTS
+# Get fixed effect confidence intervals
+confint(model.3p, level = .95)
+CIs <- data.frame(confint(model.3p, level = .95)[3:4,])
+CIs$fixef <- fixef(model.3p)
+
+summary1 <- tidy(model.3p)
+summary1
+
+# graph fixed effect CIs
+dataframe <- data.frame("Fixed Effect" = c("Intercept", "Slope"), 
+                        "Mean" = c(CIs[1,3], CIs[2,3]), "LowerCI" = c(CIs[1,1], CIs[2,1]), "UpperCI" = c(CIs[1,2], CIs[2,2]))
+
+CIPlot <- ggplot(dataframe, aes(Fixed.Effect, Mean)) + 
+                   geom_point() +  
+                   geom_errorbar(aes(ymin = LowerCI, ymax = UpperCI), width=0.2)
+CIPlot + labs(y="Confidence Intervals", x = "Fixed Effect") 
+
+##FOR CHILDREN
+# Get fixed effect confidence intervals
+confint(model.3c, level = .95)
+CIs <- data.frame(confint(model.3c, level = .95)[3:4,])
+CIs$fixef <- fixef(model.3c)
+
+# graph fixed effect CIs
+dataframe <- data.frame("Fixed Effect" = c("Intercept", "Slope"), 
+                        "Mean" = c(CIs[1,3], CIs[2,3]), "LowerCI" = c(CIs[1,1], CIs[2,1]), "UpperCI" = c(CIs[1,2], CIs[2,2]))
+
+CIPlot <- ggplot(dataframe, aes(Fixed.Effect, Mean)) + 
+                   geom_point() +  
+                   geom_errorbar(aes(ymin = LowerCI, ymax = UpperCI), width=0.2)
+CIPlot + labs(y="Confidence Intervals", x = "Fixed Effect") 
+
+```
+
+
+##4. Run an additional model with a random slope. How does this change compare to the previous model? Should you keep the random slope or not?
+```{r}
+model.4p <- lmer(Utterances.with.Letters  ~ 1 + Session + (1 + Session|Subject), data = parents)
+summary(model.4p)
+
+model.4c <- lmer(Utterances.with.Letters  ~ 1 + Session + (1 + Session|Subject), data = children)
+summary(model.4c)
+```
+**For Parents:**
+
+Average intercept = 2.55 utterances with letters at Session 0 (around child age 10 months) *(2.55 in model without random slope)*
+
+Average slope = .74 utterances with letters every 4 months *(.75 in model without random slope)*
+
+
+Residual variance = 243.260 *(287.38 in model without random slope)*
+
+**For Children:**
+
+Average intercept = 0.002  utterances with letters at Session 0 (around child age 10 months) *(0.001 in model without random slope)*
+
+Average slope = .89 utterances with letters every 4 months *(.89 in model without random slope)*
+
+
+Residual variance = 206.76 *(231.43 in model without random slope)*
+
+
+The residual error has decreased in both models, suggesting I should keep the random slope.
+
+##5. Interpret the correlation between the slope and the intercept.
+
+The fixed effects correlation is -0.81. The lower the intercept the greater the slope. There is a very strong relationship between the average intercept and the average slope.
+
+##6. Create a density plot of the random effects from your final model.
+```{r}
+library(merTools)
+## FOR PARENTS
+re.sim.p <- REsim(model.4p)
+
+# Intercept random effects
+p1.gg1 <- re.sim.p %>% 
+  filter(term == "(Intercept)") 
+
+ggplot(p1.gg1, aes(mean)) +
+  geom_density()
+
+# Slope random effects
+p1.gg2 <- re.sim.p %>% 
+  filter(term == "Session") 
+
+ggplot(p1.gg2, aes(mean)) +
+  geom_density()
+
+## FOR CHILDREN
+re.sim.c <- REsim(model.4c)
+
+# Intercept random effects
+p1.gg3 <- re.sim.c %>% 
+  filter(term == "(Intercept)") 
+
+ggplot(p1.gg3, aes(mean)) +
+  geom_density()
+
+# Slope random effects
+p1.gg4 <- re.sim.c %>% 
+  filter(term == "Session") 
+
+ggplot(p1.gg4, aes(mean)) +
+  geom_density()
+
+```
+
+
+
+##7. Create a catepilar plot of the random effects. Is there any person that seems odd in terms of a large standard errors around intercept and slope estimates?
+```{r}
+p1 <- plotREsim(re.sim.p)
+p1
+# 75, 27
+
+p2 <- plotREsim(re.sim.c)
+p2
+#75, 25, 89
+```
+
+The listed participant numbers aboce have effect ranges for the intercept differ significantly from 0. However, by and large, standard errors around the intercept and slope values all seem to be within normal limits.
+
+##8. Create a plot of the trajectory, along with a spaghetti plot of each person’s individual slope. Set the alpha level (transparency) on the individual slopes to make them easier to see.
+```{r}
+coefs <- data.frame(coef(model.4p)[[1]])
+
+ggplot(data = parents, aes(Session, Utterances.with.Letters)) +
+   stat_smooth(aes(Session, Utterances.with.Letters), method = lm, se = F) +
+   xlim(0,12) + ylim (-20,20) +
+  geom_abline(data = coefs, aes(slope = Session, intercept = X.Intercept.), alpha = 0.2)
+```
+
