@@ -34,4 +34,227 @@ ggplot(data = children, aes(Session, Utterances.with.Letters)) +
    xlim(0,12) + ylim (-20,20) +
   geom_abline(data = coefs, aes(slope = Session, intercept = 0), alpha = 0.2)
 ```
+from broom package:
+augment gives individual
+tidy gives fixed effects - gives sds not variances
+glace gives fit values
 
+deviance want larger - related to log likelihood
+For AIC & BIC we want smaller values
+
+Below is code that should work for all models. Just run the function and save it as an R object. You can use this with papaja and the apa_table() function pretty easily. The trick is that if you are not using the papaja template, the proper LaTeX packages may not be loaded. You can get around this by attaching a .tex file calling the packages under "in_header: header.tex" in your YAML header. The YAML header of this .Rmd file contains the necessary syntax and the header.tex file with the proper packages.
+
+```{r}
+
+fixed %.% filter(term %in% c("Session","Child.Gender"))
+library(dplyr)
+## here's some code to make a table. You shouldn't need to modify anything here 
+# unless you add additional random effects terms
+## fixed effects first ##
+table_fun <- function(model){
+    fixed <- broom::tidy(model) %>% filter(group == "fixed") %>%
+    select(term, estimate) 
+  ## add random effects ##
+  rand <- broom::tidy(model) %>% filter(group != "fixed") %>%
+    select(term, estimate)
+  ## get confidence intervals ##
+  CI <- data.frame(confint.merMod(model, method = "boot", nsim = 10)) %>%
+    mutate(term = rownames(.)) %>% setNames(c("lower", "upper", "term"))
+  # nsim should be higher
+  # oldNames = F for understandable names
+  # new column called term that has row names
+  
+  ## Get ICC & R2 values ##
+  ICC <- reghelper::ICC(model) # For model with no slope, unconditional cell means model
+  R2 <- MuMIn::r.squaredGLMM(model)
+  
+  ## format the fixed effects
+  fixed <- fixed %>% left_join(CI %>% filter(!grepl(".sig", term))) %>%
+    mutate(type = "Fixed Parts")
+  # Selecting only the CIs for the fixed effects
+ 
+  # variance of intercept, variance of slope, variance of correlation, variance of residuals 
+  # If model doesn't have a random slope - remove the terms with 1 in them
+  rand <- rand %>%
+    mutate(term = mapvalues(term, unique(term), 
+            c("$\\tau_{00}$", "$\\tau_{11}$", "$\\tau_{10}$", "$\\hat{\\sigma^2}$")),
+           estimate = estimate^2) %>%
+    left_join(
+      CI %>% filter(grepl(".sig", term)) %>%
+        mutate(term = mapvalues(term, unique(term), 
+            c("$\\tau_{00}$", "$\\tau_{10}$", "$\\tau_{11}$", "$\\hat{\\sigma^2}$")),
+            lower = lower^2, upper = upper^2)) %>%
+    mutate(type = "Random Parts")
+  
+# tribble builds a table by rows (not columns)  
+  mod_terms <- tribble(
+    ~term, ~estimate, ~type,
+    "ICC", ICC, "Model Terms",
+    "$R^2_m$", R2[1], "Model Terms",
+    "$R^2_c$", R2[2], "Model Terms"
+  )
+  
+  tab <- fixed %>%
+    full_join(rand) %>%
+    mutate(CI = sprintf("(%.2f, %.2f)", lower, upper)) %>% #round to two decimal points and puts in a comma
+    select(-lower, -upper) %>%
+    full_join(mod_terms) %>%
+    mutate(estimate = sprintf("%.2f", estimate)) %>%
+    select(type, everything()) # put type first and every other column in the order it was in
+}
+# you can use this with papaja and the apa_table function pretty easily
+# the trick is that if you are not using the papaja template, the proper
+# LaTeX packages may not be loaded. You can get around this by attaching
+# a .tex file calling the packages under "in_header: header.tex" in your YAML
+# header the YAML header of this .Rmd file contains the necessary syntax and 
+# the header.tex file with the proper packages
+
+# copy latex into new markdown file and select output Word
+output:
+  word_document:
+    includes:
+      in_header:
+        header.tex
+
+tab <- table_fun(mod1a)
+```
+
+```{r, results= 'asis'}
+library(kableExtra)
+options(knitr.kable.NA = '')
+knitr::kable(tab %>% #select(-type) %>%
+    mutate(term = gsub("[()]", "", term)),
+             caption = "Not Quite Right kableExtra MLM Table Example", 
+    format = "latex", 
+    #longtable = T, 
+    booktabs = T, escape = F) %>%
+  # group_rows("Fixed", 1,4) %>% 
+  # group_rows("Random", 5,9) %>%
+  # group_rows("Model", 9,11) %>%
+  collapse_rows(1) %>%
+  #kable_styling(latex_options = c("striped","repeat_header"),full_width = F)
+  add_header_above(c(" ", " ", "Model 1" = 2))
+
+
+# apa_table has col_spanners - which columns to span and what to name it 
+# col_spanners = list('Sensation Seeking' = c(2,3))
+# col.names = c(",", rep(c("b,"CI)), times = 3)
+# align = c("l","l",)
+
+papaja::apa_table(tab %>% select(-type),caption = "papaja MLM Table Example", 
+    na_string = "", stub_indents = list(Fixed = c(1:4), Random = c(5:11), Summary = c(9:11)))
+```
+
+```{r}
+library(sjPlot)
+# Categorical, to show the interaction
+sjp.int(mod2g, type = "eff", p.kr = F, swap.pred = T)
+
+# Continuous
+sjp.int(mod1b, type = "eff", p.kr = F, swap.pred = T, mdrt.values = "meansd")
+
+```
+
+```{r}
+# Plotting with ggplot
+# example for categorical
+fixed.frame <- 
+  data.frame(
+    expand.grid(
+      # here, you add values for your time variable and predictors, for me: graph from 1 to 12 , how often doesn't really matter
+      # Want a column for each of the terms in your model
+      age0 = seq(0,10,2), 
+      groupsNone = c(0,1))) %>%
+  # now take care of interactions and add an intercept
+  mutate(`age0:groupsNone` = age0*groupsNone,
+         Intercept = 1) %>%
+  # reordering everything
+  select(Intercept, everything())
+```
+
+```{r}
+# Categorical again - nice for more complex models, don't have to individually deal with interactions
+# Using predict to use age and group and plugging into an equation
+fixed.frame <- data.frame(expand.grid(age0 = seq(0,10,2), 
+      groups = c("None","Jail"))) %>% # call them by name
+  mutate(pred = predict(mod2g, newdata = ., re.form = NA)) # not using random effects
+
+fixed.frame$pred <- as.vector(as.matrix(fixed.frame) %*% fixef(mod2g))
+
+fixed.frame %>%
+  mutate(age = age0 + 14) %>%
+  ggplot(aes(x = age, y = pred, color = groups)) +
+    geom_line(size = 2) + 
+    lims(y = c(0,4)) +
+    labs(x = "Age", y = "Sensation Seeking Composite",
+         title = "2 Group Time Invariant Conditional Growth Models") +
+    theme_classic() +
+    theme(axis.text = element_text(face = "bold", size = rel(1.2)),
+          axis.title = element_text(face = "bold", size = rel(1.2)),
+          legend.title = element_text(face = "bold", size = rel(1.2)),
+          plot.title = element_text(face = "bold", size = rel(1.2), hjust = .5))
+```
+
+```{r}
+# multiplying to get values for model frame
+fixed.frame$pred <- as.vector(as.matrix(fixed.frame) %*% fixef(mod2g))
+
+fixed.frame %>%
+  mutate(groups = factor(groupsNone, levels = c(0,1), labels = c("Jail", "None")),
+         age = age0 + 14) %>%
+  ggplot(aes(x = age, y = pred, color = groups)) +
+    geom_line(size = 2) + 
+    labs(x = "Age", y = "Sensation Seeking Composite",
+         title = "2 Group Time Invariant Conditional Growth Models") +
+    theme_classic() +
+    theme(axis.text = element_text(face = "bold", size = rel(1.2)),
+          axis.title = element_text(face = "bold", size = rel(1.2)),
+          legend.title = element_text(face = "bold", size = rel(1.2)),
+          plot.title = element_text(face = "bold", size = rel(1.2), hjust = .5))
+```
+
+```{r}
+# example for continuous
+fixed.frame <- sample_dat %>%
+  summarise(mean = mean(DemPweight, na.rm = T), 
+            sd = sd(DemPweight, na.rm = T))
+
+fixed.frame <- 
+  data.frame(
+    expand.grid(
+      # here, you add values for your time variable and predictors
+      age0 = seq(0,10,2), 
+      DemPweight = c(fixed.frame$mean-fixed.frame$sd,
+                     fixed.frame$mean,
+                     fixed.frame$mean+fixed.frame$sd))) %>%
+    mutate(pred = predict(mod1b, newdata = ., re.form =NA))
+  # now take care of interactions and add an intercept
+  #mutate(`age0:DemPweight` = age0*DemPweight,
+         #Intercept = 1) %>%
+  # reordering everything
+  #select(Intercept, everything())
+
+# multiplying to get values for model frame
+#fixed.frame$value <- as.vector(as.matrix(fixed.frame) %*% fixef(mod1b))
+
+
+fixed.frame %>%
+  mutate(Weight = factor(DemPweight, levels = unique(DemPweight), labels = c("-1SD", "0SD", "1SD")),
+         age = age0 + 14) %>%
+  ggplot(aes(x = age, y = value, color = Weight)) +
+    geom_line(size = 2) + 
+    labs(x = "Age", y = "Sensation Seeking Composite",
+         title = "Continuous Invariant Conditional Growth Models") +
+    theme_classic() +
+    theme(axis.text = element_text(face = "bold", size = rel(1.2)),
+          axis.title = element_text(face = "bold", size = rel(1.2)),
+          legend.title = element_text(face = "bold", size = rel(1.2)),
+          plot.title = element_text(face = "bold", size = rel(1.2), hjust = .5))
+```
+
+γ00 - intercept for group coded as 0
+γ01 - difference between the two groups
+Why do people vary on the intercept? Now we're saying group might explain it. Random effects (U0j) will get smaller if group is explaining something. 
+
+If group is also predicting slope. Why do some people have shallower slopes? Does group help explain that. U1j should get smaller. Will also change the γ10 - it's serving as an intercept - it's the average slope and we're adjusting up and down based on someone's intercept and residual.
+Any time there is a level 2 predictor of slope you get an interaction. Any time there is a predictor of slope, you have an interaction.  
