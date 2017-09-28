@@ -1,0 +1,37 @@
+---
+title: "Week 5 Class"
+author: "Molly Farry-Thorn"
+date: "September 26, 2017"
+output: pdf_document
+---
+
+```{r}
+model.4pi <- lmer(Utterances.with.Letters  ~ 1 + Session + (1 + Session|Subject), data = parents)
+summary(model.4pi)
+model.4p <- lmer(Utterances.with.Letters  ~ -1 + Session + (-1 + Session|Subject), data = parents)
+summary(model.4p)
+#log likelihood - larger values better, AIC/BIC smaller is better
+anova(model.4pi, model.4p)
+
+model.4ci <- lmer(Utterances.with.Letters  ~ 1 + Session + (1 + Session|Subject), data = children)
+summary(model.4ci)
+model.4c <- lmer(Utterances.with.Letters  ~ -1 + Session + (-1 + Session|Subject), data = children)
+summary(model.4c)
+anova(model.4ci, model.4c)
+# Go with no intercept
+
+
+coefs <- data.frame(coef(model.4pi)[[1]])
+ggplot(data = parents, aes(Session, Utterances.with.Letters)) +
+   stat_smooth(aes(Session, Utterances.with.Letters), method = lm, se = F) +
+   xlim(0,12) + ylim (-20,20) +
+  geom_abline(data = coefs, aes(slope = Session, intercept = 0), alpha = 0.2)
+
+
+coefs <- data.frame(coef(model.4c)[[1]])
+ggplot(data = children, aes(Session, Utterances.with.Letters)) +
+   stat_smooth(aes(Session, Utterances.with.Letters), method = lm, se = F) +
+   xlim(0,12) + ylim (-20,20) +
+  geom_abline(data = coefs, aes(slope = Session, intercept = 0), alpha = 0.2)
+```
+
