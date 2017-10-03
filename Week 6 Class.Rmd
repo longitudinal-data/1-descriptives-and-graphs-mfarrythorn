@@ -1,0 +1,36 @@
+---
+title: "Week 6 Class"
+author: "Molly Farry-Thorn"
+date: "October 5, 2017"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+library(psych)
+library(dplyr)
+library(sjPlot)
+library(tidyverse)
+library(broom)
+library(lme4)
+library(MuMIn)
+library(merTools)
+library(reghelper)
+library(stargazer)
+library(lsmeans)
+library(multcompView)
+library(ggplot2)
+letters <- read.delim("Masters coded letters.csv", header=TRUE, sep=",")
+letters$Prop.Letters <- letters$Utterances.with.Letters/letters$Utterances
+letters$Subject <- as.factor(letters$Subject)
+letters$Speaker <- as.factor(letters$Speaker)
+letters$Child.Gender <- as.factor(letters$Child.Gender)
+levels(letters$Child.Gender) <- c("Male","Female")
+parents <- subset(letters, Speaker==0)
+children <- subset(letters, Speaker==1)
+```
+
+How should I scale my variables? Should I analyze the proportion?
