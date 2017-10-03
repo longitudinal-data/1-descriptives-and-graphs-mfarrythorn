@@ -1,4 +1,4 @@
-Subject,Session,Age,Time,Speaker,Child.Gender,SES,Length,Utterances,Utterances.with.Letters,Letter.name,Letter.shape,Letter.sound,Spelling,Child.name,Other.name,Names,Letter.Teaching,Not.Letter.Teaching,Age.KG1,WJ.KG1,EL.KG1,SM.KG1,Age.KG3,WJ.KG3,EL.KG3,SM.KG3,KG3.PropCorr,KG3.distMean
+Subject,Session,Age,Time,Speaker,Child.Gender,SES,Length,Utterances,Utterances.with.Letters,Letter.name,Letter.shape,Letter.sound,Spelling,,Other.name,Names,Letter.Teaching,Not.Letter.Teaching,Age.KG1,WJ.KG1,EL.KG1,SM.KG1,Age.KG3,WJ.KG3,EL.KG3,SM.KG3,KG3.PropCorr,KG3.distMean
 22,1,1.24,0,0,1,0.44834,92,3153,2,2,0,0,1,0,0,0,0,2,505,118,13,15,600,136,16,14,0.4,1.84
 22,2,1.51,0.27,0,1,0.44834,90,3825,0,0,0,0,0,0,0,0,0,0,505,118,13,15,600,136,16,14,0.4,1.84
 22,3,1.83,0.59,0,1,0.44834,91.52,3752,0,0,0,0,0,0,0,0,0,0,505,118,13,15,600,136,16,14,0.4,1.84
