@@ -45,14 +45,13 @@ For AIC & BIC we want smaller values
 Below is code that should work for all models. Just run the function and save it as an R object. You can use this with papaja and the apa_table() function pretty easily. The trick is that if you are not using the papaja template, the proper LaTeX packages may not be loaded. You can get around this by attaching a .tex file calling the packages under "in_header: header.tex" in your YAML header. The YAML header of this .Rmd file contains the necessary syntax and the header.tex file with the proper packages.
 
 ```{r}
-
 fixed %.% filter(term %in% c("Session","Child.Gender"))
 library(dplyr)
 ## here's some code to make a table. You shouldn't need to modify anything here 
 # unless you add additional random effects terms
 ## fixed effects first ##
 table_fun <- function(model){
-    fixed <- broom::tidy(model) %>% filter(group == "fixed") %>%
+  fixed <- broom::tidy(model) %>% filter(group == "fixed") %>%
     select(term, estimate) 
   ## add random effects ##
   rand <- broom::tidy(model) %>% filter(group != "fixed") %>%
@@ -60,25 +59,19 @@ table_fun <- function(model){
   ## get confidence intervals ##
   CI <- data.frame(confint.merMod(model, method = "boot", nsim = 10)) %>%
     mutate(term = rownames(.)) %>% setNames(c("lower", "upper", "term"))
-  # nsim should be higher
-  # oldNames = F for understandable names
-  # new column called term that has row names
   
   ## Get ICC & R2 values ##
-  ICC <- reghelper::ICC(model) # For model with no slope, unconditional cell means model
+  ICC <- reghelper::ICC(model)
   R2 <- MuMIn::r.squaredGLMM(model)
   
   ## format the fixed effects
   fixed <- fixed %>% left_join(CI %>% filter(!grepl(".sig", term))) %>%
     mutate(type = "Fixed Parts")
-  # Selecting only the CIs for the fixed effects
- 
-  # variance of intercept, variance of slope, variance of correlation, variance of residuals 
-  # If model doesn't have a random slope - remove the terms with 1 in them
+  
   rand <- rand %>%
-    mutate(term = mapvalues(term, unique(term), 
-            c("$\\tau_{00}$", "$\\tau_{11}$", "$\\tau_{10}$", "$\\hat{\\sigma^2}$")),
-           estimate = estimate^2) %>%
+    mutate(estimate = ifelse(grepl("cor", term) == T, estimate, estimate^2),
+          term = mapvalues(term, unique(term), 
+           c("$\\tau_{00}$", "$\\tau_{11}$", "$\\tau_{10}$", "$\\hat{\\sigma^2}$"))) %>%
     left_join(
       CI %>% filter(grepl(".sig", term)) %>%
         mutate(term = mapvalues(term, unique(term), 
@@ -86,7 +79,6 @@ table_fun <- function(model){
             lower = lower^2, upper = upper^2)) %>%
     mutate(type = "Random Parts")
   
-# tribble builds a table by rows (not columns)  
   mod_terms <- tribble(
     ~term, ~estimate, ~type,
     "ICC", ICC, "Model Terms",
@@ -96,11 +88,13 @@ table_fun <- function(model){
   
   tab <- fixed %>%
     full_join(rand) %>%
-    mutate(CI = sprintf("(%.2f, %.2f)", lower, upper)) %>% #round to two decimal points and puts in a comma
+    mutate(CI = sprintf("(%.2f, %.2f)", lower, upper)) %>%
     select(-lower, -upper) %>%
     full_join(mod_terms) %>%
     mutate(estimate = sprintf("%.2f", estimate)) %>%
-    select(type, everything()) # put type first and every other column in the order it was in
+    dplyr::rename(b = estimate) %>%
+    select(type, everything())
+  return(tab)
 }
 # you can use this with papaja and the apa_table function pretty easily
 # the trick is that if you are not using the papaja template, the proper
@@ -109,6 +103,8 @@ table_fun <- function(model){
 # header the YAML header of this .Rmd file contains the necessary syntax and 
 # the header.tex file with the proper packages
 
+tab <- table_fun(mod2g)
+
 # copy latex into new markdown file and select output Word
 output:
   word_document:
@@ -116,7 +112,6 @@ output:
       in_header:
         header.tex
 
-tab <- table_fun(mod1a)
 ```
 
 ```{r, results= 'asis'}
@@ -254,7 +249,14 @@ fixed.frame %>%
 
 γ00 - intercept for group coded as 0
 γ01 - difference between the two groups
-Why do people vary on the intercept? Now we're saying group might explain it. Random effects (U0j) will get smaller if group is explaining something. 
+Why do people vary on the intercept? Now we're saying group might explain it. Random effects (μ0j) will get smaller if group is explaining something. 
 
-If group is also predicting slope. Why do some people have shallower slopes? Does group help explain that. U1j should get smaller. Will also change the γ10 - it's serving as an intercept - it's the average slope and we're adjusting up and down based on someone's intercept and residual.
+If group is also predicting slope. Why do some people have shallower slopes? Does group help explain that. μ1j should get smaller. Will also change the γ10 - it's serving as an intercept - it's the average slope and we're adjusting up and down based on someone's intercept and residual.
 Any time there is a level 2 predictor of slope you get an interaction. Any time there is a predictor of slope, you have an interaction.  
+No random effect (got rid of μ1j) - then you assume that within groups they have the same slopes but group slopes can be different. Might not need a random slope once you have added a group - group might explain the randomness.
+
+Maybe I should change the unit of time...
+Rescale my proportion?
+
+Controlling for job status - shifting the slope. The slope is interpreted as accounting for Job. What would happen if everyone had same effect of job.
+Job coefficient - how big a hit do you take if you don't have a job, controlling for time.
