@@ -1,0 +1,50 @@
+---
+title: "Week 7 Classs"
+author: "Molly Farry-Thorn"
+date: "October 12, 2017"
+output: pdf_document
+---
+
+Intensive Data (cont)
+Follow Isidro's code for homework
+Last class explicitly focused on HLM/MLM
+Next week - SEM, lavaan package
+
+If you don't have systematic changes across time, you don't need growth models. Instead, interested in fluxuations.
+
+Level 1:
+Yij = B0j + B1ij*Time + B2ij
+B2 - time-varying covariate 
+When someone in general has better ER, do they have higher or lower levels of HS. We can look at many assessments.
+Homesickness and Emotion Regulation - are they related? Like a correlation but we have many assessments per person.
+
+Level 2:
+B0 = γ00 + u00
+B1 = γ10 + u10
+B2 = γ20 + u20 - There can be a group average (The random effect means we don't think the relationship is the same across people)
+
+*Concerns for intensive models*
+The time-varying covariate likely has a between and within person effect.
+
+Within-person, some people can have an effect that is opposite the overall between-person effect.
+The within-person and between-person effect might be correlated. E.g. people with higher stress could have a different within-person relationship than those with very low stress.
+
+To deal with this we center our data.
+Grand-mean centering 
+Person (group) centering
+
+# Level 2 predictors (between-person) should be grand-mean centered 
+Interecept is now at the average
+Every time we have a level 2 predictor we are creating an interaction. All the lower order terms are when the moderating variable is at zero.
+
+# Level 1 predictors (within-person) should be person-centered
+Person-center the Emotion Regulation. Trying to get rid of the between-person effect of our level 1 time-varying predictor. So there is no relationship between the predictor and our DV. Trying to get away from the confound.
+Predictions that deviate from your average. Get rid of the between-person effect. The question is not if you typically use the ER strategies, but instead if you use them more often then you usually do, does that effect the DV.
+
+Create a new variable from the time-varying covariate and grand-mean center. Take person-centered stress score and control for it by entering it as a Level 2 (between-person) variable. This will now account for the fact people differ on their overall stress level. 
+Grand-mean center the person averages. We can seperate the between- and within-person effects. You average level doesn't influence whether the fluxuations effect the DV.
+
+γ21 between-person, just one score. Does stress impact DV. 
+
+
+Time lag the person-centered predictors. Need an NA on day 1.

@@ -1,0 +1,21 @@
+---
+title: "Week 7 Homework"
+author: "Molly Farry-Thorn"
+date: "October 12, 2017"
+output: pdf_document
+---
+
+*Isidro's Code*
+```{r}
+library(haven)
+library(tidyverse)
+library(magrittr)
+library(ggplot2)
+library(lme4)
+library(psych)
+library(reghelper)
+library(knitr)
+library(kableExtra)
+```
+
+
