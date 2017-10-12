@@ -2,7 +2,13 @@
 title: "Week 5 Homework"
 author: "Molly Farry-Thorn"
 date: "October 3, 2017"
-output: pdf_document
+output: 
+  pdf_document:
+    keep_tex: yes
+    toc: yes
+    includes:
+            in_header:
+                header.tex
 ---
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -24,6 +30,7 @@ library(multcompView)
 library(ggplot2)
 letters <- read.delim("Masters coded letters.csv", header=TRUE, sep=",")
 letters$Prop.Letters <- letters$Utterances.with.Letters/letters$Utterances
+letters$Time.c <- letters$Time - mean(letters$Time) 
 letters$Subject <- as.factor(letters$Subject)
 letters$Speaker <- as.factor(letters$Speaker)
 letters$Child.Gender <- as.factor(letters$Child.Gender)
@@ -39,49 +46,49 @@ children <- subset(letters, Speaker==1)
 # time invariant covariate that predicts the intecept but not slope
 children$Child.Gender <- relevel(children$Child.Gender, ref = "Male")
 
-mod1a <- lmer(Utterances.with.Letters ~ Time + Child.Gender + (1|Subject), data = children)
+mod1a <- lmer(Utterances.with.Letters ~ Time.c + Child.Gender + (Time.c|Subject), data = children)
 summary(mod1a)
 ```
 **Fixed Effects** 
 
-Intercept: 1.8813; mean number of utterances with letters for male children at Session 1
+Intercept: 6.07; mean number of utterances with letters for male children at the mean age
 
 Time: 2.63; increase in number of utterances with letters every year
 
-Child.Gender: -1.95; difference between males and females at Session 1, females start lower
+Child.Gender: -0.60; difference between males and females at mean age, females start lower
 
 # b) predicts both intercept and slope 
 ```{r}
 # time invariant predictor for the intercept AND slopes
-mod1b <- lmer(Utterances.with.Letters ~ Time + Child.Gender + Time*Child.Gender + (1|Subject), data = children)
+mod1b <- lmer(Utterances.with.Letters ~ Time.c + Child.Gender + Time.c*Child.Gender + (Time.c|Subject), data = children)
 summary(mod1b)
 ```
 **Fixed Effects** 
 
-Intercept: 0.29; mean number of utterances with letters for male children at Session 1
+Intercept: 6.71; mean number of utterances with letters for male children at mean age
 
-Time: 3.50; increase in number of utterances with letters every year, for males
+Time: 3.51; increase in number of utterances with letters every year, for males
 
-Child.Gender: 1.40; difference between males and females at Session 1, females start higher (different than last model)
+Child.Gender: -1.95; difference between males and females at mean age, females are lower
 
-Time:Child.Gender: -1.83; difference in the slopes between males and females, the effect of age is smaller in females
+Time:Child.Gender: -1.84; difference in the slopes between males and females, the effect of age is smaller in females
 
 # c) is rescaled (e.g. centering). 
 ```{r}
 # changing dummy coding such that reference group becomes females
 children$Child.Gender <- relevel(children$Child.Gender, ref = "Female")
-mod1c <- lmer(Utterances.with.Letters ~ Time + Child.Gender + Time*Child.Gender + (1|Subject), data = children)
+mod1c <- lmer(Utterances.with.Letters ~ Time.c + Child.Gender + Time.c*Child.Gender + (Time.c|Subject), data = children)
 summary(mod1c)
 ```
 **Fixed Effects** 
 
-Intercept: 1.69; mean number of utterances with letters for female children at Session 1
+Intercept: 4.76; mean number of utterances with letters for female children at mean age
 
 Time: 1.67; increase in number of utterances with letters every year, for females
 
-Child.Gender: -1.40; difference between males and females at Session 1, males start lower. This is the same difference we found in mod1b, just in the opposite direction.
+Child.Gender: 1.95; difference between males and females at mean age, males start higher. This is the same difference we found in mod1b, just in the opposite direction.
 
-Time:Child.Gender: 1.83; difference in the slopes between males and females, the effect of age is larger in males. This is the same difference we found in mod1b, just in the opposite direction.
+Time:Child.Gender: 1.84; difference in the slopes between males and females, the effect of age is larger in males. This is the same difference we found in mod1b, just in the opposite direction.
 
 ```{r}
 anova(mod1a,mod1b)
@@ -92,31 +99,31 @@ The likelihood ratio test suggests that simpler model, where covariate only pred
 # 2. Introduce a time-invariant continuous covariate and run models a-c from #1.
 ```{r}
 # time-invariant continuous covariate that only predicts the intercept
-mod2a <- lmer(Utterances.with.Letters ~ Time + SES + (1|Subject), data = children)
+mod2a <- lmer(Utterances.with.Letters ~ Time.c + SES + (Time.c|Subject), data = children)
 summary(mod2a)
 ```
 **Fixed Effects** 
 
-Intercept: 0.96; mean of number of utterances with letters for children with mean level SES at Session 1
+Intercept: 5.78; mean of number of utterances with letters for children with mean level SES at mean age
 
-Time: 2.63; increase in number of utterances with letters every year, when SES at mean level 
+Time: 2.64; increase in number of utterances with letters every year, when SES at mean level 
 
-SES: 1.20; increase in number of utterances for every 1 unit increase in SES
+SES: 0.73; increase in number of utterances for every 1 unit increase in SES at mean age
 
 ```{r}
 # time-invariant continuous covariate predicts the intercept AND slopes
-mod2b <- lmer(Utterances.with.Letters ~ Time + SES + Time*SES + (1|Subject), data = children)
+mod2b <- lmer(Utterances.with.Letters ~ Time.c + SES + Time.c*SES + (Time.c|Subject), data = children)
 summary(mod2b)
 ```
 **Fixed Effects** 
 
-Intercept: 0.96; mean of number of utterances with letters for children with mean level SES at Session 1
+Intercept: 5.78; mean of number of utterances with letters for children with mean level SES at mean age
 
 Time: 2.63; increase in number of utterances with letters every year, when SES at mean level 
 
-SES: 0.01; increase in number of utterances for every 1 unit increase in SES at Session 1
+SES: 1.19; increase in number of utterances for every 1 unit increase in SES at mean age
 
-Time:SES: 0.65; the change in the relationship in the time slope for every 1 unit increase in SES 
+Time:SES: 0.63; the change in the relationship in the time slope for every 1 unit increase in SES 
 
 *My SES variable is already centered.*
 ```{r}
@@ -124,16 +131,18 @@ anova(mod2a,mod2b)
 ```
 Again, the likelihood ratio test suggests that simpler model, where covariate only predicts intercept, is preferred. 
 
+
 # 3. Graph both of your final models for the continuous and nominal models above. 
 ```{r}
 # Graphing nominal, where gender only predict the intercept
 children$Child.Gender <- relevel(children$Child.Gender, ref = "Male")
-sjp.lmer(mod1a, type = "pred.fe", var = c("Time", "Child.Gender"), facet = FALSE, show.scatter = FALSE)
+sjp.lmer(mod1a, type = "pred.fe", var = c("Time.c", "Child.Gender"), facet = FALSE, show.scatter = FALSE)
 
-fixed.frame <- data.frame(expand.grid(Time = seq(0,4,1), Child.Gender = c("Male", "Female"))) %>%
+fixed.frame <- data.frame(expand.grid(Time.c = seq(-1.8,4,1.8), Child.Gender = c("Male", "Female"))) %>%
   mutate(pred = predict(mod1a, newdata = ., re.form = NA))
+fixed.frame <- fixed.frame %>% mutate(Time.new = Time.c + mean(letters$Time))
 
-nom <- ggplot(aes(x = Time, y = pred, color = Child.Gender), data = fixed.frame) +
+nom <- ggplot(aes(x = Time.new, y = pred, color = Child.Gender), data = fixed.frame) +
   geom_line() +
   labs(x = "Time", y = "# of Utterances with Letters") +
   theme_classic()
@@ -144,9 +153,11 @@ nom
 # Graphing continuous, where SES only predicts the intercept
 fixed.frame2 <- letters %>%
   summarise(mean = mean(SES, na.rm = T), sd = sd(SES, na.rm = T))
+fixed.frame <- fixed.frame %>% mutate(Time.new = Time.c + mean(letters$Time))
+
 fixed.frame2 <- data.frame(
   expand.grid(
-    Time = seq(0,4,1),
+    Time.c = seq(-1.8,1,1.8),
     SES = c(fixed.frame2$mean - fixed.frame2$sd,
             fixed.frame2$mean,
             fixed.frame2$mean + fixed.frame2$sd))) %>%
@@ -155,7 +166,7 @@ fixed.frame2 <- data.frame(
 fixed.frame2$SES <- as.factor(fixed.frame2$SES)
 levels(fixed.frame2$SES) <- c("-1 SD","Mean", "+1 SD")
 
-con <- ggplot(aes(x = Time, y = pred, color = SES), data = fixed.frame2) +
+con <- ggplot(aes(x = Time.c, y = pred, color = SES), data = fixed.frame2) +
   geom_line() +
   labs(x = "Time", y = "# of Utterances with Letters") +
   theme_classic()
@@ -164,7 +175,8 @@ con
 
 
 # 4. Calculate confidence intervals around your estimates for your final models
-```{r}
+```{r warning = FALSE}
+library(broom)
 #Confidence intervals around nominal model
 mod1a.ci <- confint(mod1a, level = .95, oldNames = F, method = "boot", nsim = 1000)
 broom::tidy(mod1a.ci)
@@ -172,6 +184,64 @@ broom::tidy(mod1a.ci)
 #Confidence intervals around continuous model
 mod2a.ci <- confint(mod2a, level = .95, oldNames = F, method = "boot", nsim = 1000)
 broom::tidy(mod2a.ci)
+```
+
+# Table of model with nominal predictor
+```{r echo = FALSE, results = 'asis', message = FALSE}
+## fixed effects first ##
+table_fun <- function(model){
+  fixed <- broom::tidy(model) %>% filter(group == "fixed") %>%
+    dplyr::select(term, estimate) 
+  ## add random effects ##
+  rand <- broom::tidy(model) %>% filter(group != "fixed") %>%
+    dplyr::select(term, estimate)
+  ## get confidence intervals ##
+  CI <- data.frame(confint(model, method = "boot", nsim = 100)) %>%
+    mutate(term = rownames(.)) %>% setNames(c("lower", "upper", "term"))
+  
+  
+  ## format the fixed effects
+  fixed <- fixed %>% left_join(CI %>% filter(!grepl(".sig", term))) %>%
+    mutate(type = "Fixed Parts")
+  
+  rand <- rand %>%
+    mutate(estimate = ifelse(grepl("cor", term) == T, estimate, estimate^2),
+          term = plyr::mapvalues(term, unique(term), 
+           c("$\\tau_{00}$", "$\\tau_{11}$", "$\\tau_{10}$", "$\\hat{\\sigma^2}$"))) %>%
+    left_join(
+      CI %>% filter(grepl(".sig", term)) %>%
+        mutate(term = plyr::mapvalues(term, unique(term), 
+            c("$\\tau_{00}$", "$\\tau_{10}$", "$\\tau_{11}$", "$\\hat{\\sigma^2}$")),
+            lower = lower^2, upper = upper^2)) %>%
+    mutate(type = "Random Parts")
+  
+  tab <- fixed %>%
+    dplyr::full_join(rand) %>%
+    mutate(CI = sprintf("(%.2f, %.2f)", lower, upper)) %>%
+    dplyr::select(-lower, -upper) %>%
+    mutate(estimate = sprintf("%.2f", estimate)) %>%
+    dplyr::select(type, everything())
+  return(tab)
+}
+
+```
+
+```{r message = FALSE}
+table1 <- table_fun(mod1a)
+options(knitr.kable.NA = '')
+knitr::kable(table1, caption = "Nominal Model")
+```
+
+
+# Table of model with continuous predictor
+
+```{r message = FALSE, warning = FALSE}
+table2 <- table_fun(mod2a)
+```
+
+```{r echo = FALSE, results = 'asis', message = FALSE}
+options(knitr.kable.NA = '')
+knitr::kable(table2, caption = "Continuous Model")
 ```
 
 # 5. Include both types of covariates in a single model. How does your interpretation of parameters change?
@@ -198,8 +268,8 @@ Child.Gender:SES: 2.14; the difference between the relationship of SES and the n
 Time:Child.Gender:SES: -2.37; the difference between the interaction of SES and Time for males and females
 
 # 6. If you have one available, introduce a time-varying covariate.
-```{r}
-mod4 <- lmer(Utterances.with.Letters ~ Time + Utterances + (1|Subject), data = children)
+```{r warning = FALSE}
+mod4 <- lmer(Utterances.with.Letters ~ Time.c + Utterances + (Time.c|Subject), data = children)
 summary(mod4)
 ```
 **Fixed Effects** 

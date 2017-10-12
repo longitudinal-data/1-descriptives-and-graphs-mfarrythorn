@@ -34,3 +34,36 @@ children <- subset(letters, Speaker==1)
 ```
 
 How should I scale my variables? Should I analyze the proportion?
+
+Sending us daily diary data for next homework
+
+Time is our predictor so we square it. You have two Level 1 predictors - linear and quadratic.
+Subtracting out the mean time. So tangent at time 0.
+The square is an interaction term. Center it so the lower order terms are easier to interpret.
+Without centering - how did that initial trajectory change over time. For really curved trajectories, more helpful to center.
+At Level 2 with have average across everyone. We decide if there are random effects or other predictors.
+Centering will change your lower order term. Where you're interested in the curve.
+Ranef for quadratic - people have different types of curves.
+Ranef linear year - people have the same quadratic curve but the linear tangent can be more or less steep.
+
+Splines are helpful when you think there will be two different trajectories before or after a specific event.
+Create a knot. Slope up to the knot and slope after the knot.
+Difference between initial slope and second slope. Is that difference sig.
+
+# Intensive Data Analysis: Within-Person Fluctuations
+
+Need to insert rows for missing time points
+The linear trends aren't the question, instead why are some pople fluctuating
+Look at ICC - tells you how much between vs. within. Higher ICC is more between person
+Between - some people are just more or less homesick
+The mean of personality is better than a mean of mood. 
+Level 1 - person center.
+Level 2 - grand mean center.
+
+Someone who ruminates more on average might be more homesick - Level 2 
+
+Might not be that ruminating more for yourself makes you more homesick - Level 1
+
+Within person centering - your average is 0 and so you are looking then at your fluctuations and everyone has the same average - deviations from your average. So you're getting rid of the issue that someone who ruminates a lot is more likely to ruminate on a given day.
+Aggregate of rumination - mean for each person: This is the between people.
+Person centered rumination - variation for each person: This is within pe
