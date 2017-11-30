@@ -1,0 +1,229 @@
+---
+title: "Week 9 Homework"
+author: "Molly Farry-Thorn"
+date: "November 2, 2017"
+output: pdf_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+library(psych)
+library(lavaan)
+library(semPlot)
+library(semTools)
+library(tidyr)
+library(plyr)
+
+# Set up my data
+Chicago <- read.delim("CTOPP & WJ scores.csv", header=TRUE, sep=",")
+Chicago.wide <- gather(Chicago, Var, Val, select=c("Age", "Age.c", "Timepoint", "ctopp_el_raw", "ctopp_nr_raw", "ctopp_sm_raw", "wj_wordid_raw", "wj_wordattack_raw","wj_wordid_standard")) %>%
+           unite(VarG, Var, Grade) %>%
+           spread(VarG, Val)
+names(Chicago.wide)[1] <- "Participant"
+Chicago.wide <- Chicago.wide[,c(1,8:9,6:7,4:5,2:3,24:25,22:23,
+                                12,16,20,28,32,36,
+                                13,17,21,29,33,37,
+                                10,14,18,26,30,34,
+                                11,15,19,27,31,35)]
+names(Chicago)[1] <- "Participant"
+
+```
+
+# 1. Fit a measurement model to your constructs at one time point. Try out the different types of scaling discussed in class. What changes what stays the same?
+
+```{r, warning = FALSE}
+mod.1 <- 'phonemic =~ ctopp_el_raw_KG_1 + ctopp_nr_raw_KG_1 + ctopp_sm_raw_KG_1
+          reading =~ wj_wordid_raw_KG_1 + wj_wordattack_raw_KG_1'
+
+fit.1 <- cfa(mod.1, data=Chicago.wide)
+
+summary(fit.1, fit.measures=TRUE, standardized = TRUE) # Josh included standardized=TRUE. What does that mean?
+
+semPaths(fit.1, layout = "tree", whatLabels = "est")
+# semPaths(fit.1, layout = "tree", what = "std") What is this doing??
+# no triangles means no mean structure - which is fine when not doing longitudinal (think of those triangles as zero)
+
+# Fixed factor approach rather than a marker variable approach
+
+mod.2 <- 'phonemic =~ ctopp_el_raw_KG_1 + ctopp_nr_raw_KG_1 + ctopp_sm_raw_KG_1
+          reading =~ wj_wordid_raw_KG_1 + wj_wordattack_raw_KG_1'
+
+fit.2 <- cfa(mod.2, std.lv=TRUE, data=Chicago.wide)
+
+summary(fit.2, fit.measures=TRUE,  standardized = TRUE)
+
+semPaths(fit.2, layout = "tree", whatLabels = "est")
+```
+Under the marker method, parameter estimates (means) were fixed at 1 for the first indicators (i.e. ctopp_el_raw_KG_1 and wj_wordid_raw_KG_1). 
+
+Under the fixed factor method, in contrast, parameter estiamtes (variances) were fixed to 1 for the latent variables (i.e. phonemic and reading). 
+
+In both cases, fit indices (e.g., logLikelihood, TLI, CFI, RMSEA) remain constant.
+
+# 2. What do the fit statistics say about your latent variable? Good/bad? Is your latent variable Just identified/saturdated, under identified or over identified?
+
+RMSEA = .000, SRMR = .035, TLI = 1.02, CFI = 1.00
+
+TLI and CFI > .90 and RMSEA and SRMR < .08, all suggesting good fit.
+
+This model is over identified, as evidenced by the positive degrees of freedom (4).
+
+# 3. Fit a longitudinal CFA model where you a) first correlate your latent factors across time and then b) a second model that predicts later times by a prevous time (ie auto regressive; t1 -> t2 -> t3). What are your conclusions? How does one differ from the other?
+
+```{r, warning = FALSE}
+# latent variables correlated across time
+mod.3 <- '
+## define latent variables
+          Phonemic_t1 =~ ctopp_el_raw_KG_1 + ctopp_nr_raw_KG_1 + ctopp_sm_raw_KG_1 
+          Phonemic_t2 =~ ctopp_el_raw_KG_3 + ctopp_nr_raw_KG_3 + ctopp_sm_raw_KG_3
+          Phonemic_t3 =~ ctopp_el_raw_FG_1 + ctopp_nr_raw_FG_1 + ctopp_sm_raw_FG_1
+
+## correlated residuals across time
+          ctopp_el_raw_KG_1 ~~ ctopp_el_raw_KG_3 + ctopp_el_raw_FG_1
+          ctopp_el_raw_KG_3 ~~ ctopp_el_raw_FG_1
+          ctopp_nr_raw_KG_1 ~~ ctopp_nr_raw_KG_3 + ctopp_nr_raw_FG_1
+          ctopp_nr_raw_KG_3 ~~ ctopp_nr_raw_FG_1
+          ctopp_sm_raw_KG_1 ~~ ctopp_sm_raw_KG_3 + ctopp_sm_raw_FG_1
+          ctopp_sm_raw_KG_3 ~~ ctopp_sm_raw_FG_1'
+
+fit.3 <- cfa(mod.3,data = Chicago.wide, std.lv = TRUE)
+summary(fit.3, standardized=TRUE, fit.measures=TRUE)
+semPaths(fit.3, whatLabels = "std")
+
+#Auto regressive, later times predicted by earlier times
+mod.4 <- 'Phonemic_t1 =~ L1*ctopp_el_raw_KG_1 + L2*ctopp_nr_raw_KG_1 + L3*ctopp_sm_raw_KG_1 
+          Phonemic_t2 =~ L1*ctopp_el_raw_KG_3 + L2*ctopp_nr_raw_KG_3 + L3*ctopp_sm_raw_KG_3
+          Phonemic_t3 =~ L1*ctopp_el_raw_FG_1 + L2*ctopp_nr_raw_FG_1 + L3*ctopp_sm_raw_FG_1
+
+##correlated residuals across time
+          ctopp_el_raw_KG_1 ~~ ctopp_el_raw_KG_3 + ctopp_el_raw_FG_1
+          ctopp_el_raw_KG_3 ~~ ctopp_el_raw_FG_1
+          ctopp_nr_raw_KG_1 ~~ ctopp_nr_raw_KG_3 + ctopp_nr_raw_FG_1
+          ctopp_nr_raw_KG_3 ~~ ctopp_nr_raw_FG_1
+          ctopp_sm_raw_KG_1 ~~ ctopp_sm_raw_KG_3 + ctopp_sm_raw_FG_1
+          ctopp_sm_raw_KG_3 ~~ ctopp_sm_raw_FG_1
+
+##directional regression paths
+          Phonemic_t3 ~ Phonemic_t2
+          Phonemic_t2 ~ Phonemic_t1
+
+## free latent variances at later times (only set the scale once)
+          Phonemic_t2 ~~ NA*Phonemic_t2
+          Phonemic_t3 ~~ NA*Phonemic_t3'
+
+fit.4 <- sem(mod.4, data=Chicago.wide, std.lv = TRUE)
+summary(fit.4, fit.measures = TRUE)
+semPaths(fit.4, whatLabels = "std")
+```
+For the longitudinal CFA model with correlated latent fators (mod.3), I conclude that my latent factors are
+strongly correlated across time. Moreover, across all three timepoints, indicators load strongly & significantly
+onto their respective latent constructs.
+For the autoregressive CFA model (mod.4), a similar picture emerges, suggesting that Semantic_1 is
+highly predictive of Semantic_2, which is highly predictive of Semantic_3. Of note, standardized variances
+for S_2 and S_3 are insignificant (p = .10 and .62, respectively), likely due to the fact that their variability
+is accounted for by
+
+# 4. Fit a longitdinal growth model in SEM and in HLM. Compare and contrast the differences.
+```{r, warning = FALSE}
+library(lme4)
+
+mod.HLM <- lmer(wj_wordid_raw ~ Timepoint + (1 | Participant), data = Chicago) #fixed slope
+summary(mod.HLM) # intercept: 17.53, slope: 7.24
+
+mod.HLM2 <- lmer(wj_wordid_raw ~ Timepoint + (Timepoint | Participant), data = Chicago) #fixed slope
+summary(mod.HLM2) # intercept: 17.51, slope: 7.24
+
+mod.SEM <- 'intercept =~ 1*wj_wordid_raw_KG_1 + 1*wj_wordid_raw_KG_3 + 1*wj_wordid_raw_FG_1 + 1*wj_wordid_raw_FG_3
+            slope =~ 0*wj_wordid_raw_KG_1 + 1*wj_wordid_raw_KG_3 + 2*wj_wordid_raw_FG_1 + 3*wj_wordid_raw_FG_3
+            slope ~~ 0*slope' #fixed slope, no variance
+mod.SEM.fixed <- growth(mod.SEM, missing = "ML", data = Chicago.wide)
+summary(mod.SEM.fixed) # intercept: 17.34, slope: 7.11
+semPaths(mod.SEM.fixed, what = "std")
+
+mod.SEM2 <- 'intercept =~ 1*wj_wordid_raw_KG_1 + 1*wj_wordid_raw_KG_3 + 1*wj_wordid_raw_FG_1 + 1*wj_wordid_raw_FG_3
+             slope =~ 0*wj_wordid_raw_KG_1 + 1*wj_wordid_raw_KG_3 + 2*wj_wordid_raw_FG_1 + 3*wj_wordid_raw_FG_3'
+mod.SEM.random <- growth(mod.SEM2, missing = "ML", data = Chicago.wide)
+summary(mod.SEM.random) # intercept: 17.28, slope: 7.17
+semPaths(mod.SEM.random, what = "std")
+
+```
+Estimates of intercept are similar between fixed slope SEM & HLM models and between random slope SEM & HLM models.
+
+Estimates of slope are similar between fixed slope SEM & HLM models and between random slope SEM & HLM models.
+
+# 5. Constrain the residual variances to be equal. Does this change the fit of your model?
+Constraining the residual variances does not significantly change model fit. LogLikelihood tests indicate that
+a simpler model, where residual variances are allowed to vary, is preferred to a more complex model where
+they are constrained to be equal.
+```{r}
+mod.SEM3 <- 'intercept =~ 1*wj_wordid_raw_KG_1 + 1*wj_wordid_raw_KG_3 + 1*wj_wordid_raw_FG_1 + 1*wj_wordid_raw_FG_3
+             slope =~ 0*wj_wordid_raw_KG_1 + 1*wj_wordid_raw_KG_3 + 2*wj_wordid_raw_FG_1 + 3*wj_wordid_raw_FG_3
+
+wj_wordid_raw_KG_1 ~~ a*wj_wordid_raw_KG_1
+wj_wordid_raw_KG_3 ~~ a*wj_wordid_raw_KG_3
+wj_wordid_raw_FG_1 ~~ a*wj_wordid_raw_FG_1
+wj_wordid_raw_FG_3 ~~ a*wj_wordid_raw_FG_3' #random slope, residual variances equal
+
+mod.SEM.equal.resid <- growth(mod.SEM3, missing = "ML", data = Chicago.wide)
+summary(mod.SEM.equal.resid) #intercept = 17.51, slope = 7.24
+semPaths(mod.SEM.equal.resid)
+anova(mod.SEM.random, mod.SEM.equal.resid) 
+```
+Constraining the residual variances does not significantly change model fit. LogLikelihood tests indicate that
+a simpler model, where residual variances are allowed to vary, is preferred to a more complex model where
+they are constrained to be equal.
+
+# 6. Contrain your slope to be fixed, not random. How does this change your model?
+```{r}
+summary(mod.SEM.fixed) # model from question #4 with fixed slope.
+
+anova(mod.SEM.random, mod.SEM.fixed) 
+```
+
+
+Constraining slopes to be fixed does not sigificantly change my model (p = .78).
+
+# 7. Change the time metric in your SEM growth model. How does that change your estimates? Does it change your fit statistics?
+changed my time metric such that the intercept was centered at TP 3 rather than TP1. This increased the
+intercept (which makes sense, given age-related change) but did not change model fit.
+I also changed my time metric such that “duration” between TP3 & TP2 > “duration” between TP2 & TP1.
+This had little impact on the intercept, but decreased the slope and improved model fit.
+```{r}
+# mydata_wide$time_1 <- 0
+# mydata_wide$time_2 <- as.numeric(mydata_wide$Age_at_time_of_testing_2) -
+# as.numeric(mydata_wide$Age_at_time_of_testing_1)
+# mydata_wide$time_3 <- as.numeric(mydata_wide$Age_at_time_of_testing_3) -
+# as.numeric(mydata_wide$Age_at_time_of_testing_1)
+mod.SEM4 <- 'intercept =~ 1*wj_wordid_raw_KG_1 + 1*wj_wordid_raw_KG_3 + 1*wj_wordid_raw_FG_1 + 1*wj_wordid_raw_FG_3
+             slope =~ -2*Sem_TotalCorrect_1 + -1*Sem_TotalCorrect_2 + 0*Sem_TotalCorrect_3 '
+mod.SEM.time <- growth(mod.SEM4, missing = "ML", data = Chicago.wide)
+summary(mod.SEM.time)
+```
+
+
+# 8. Try a different type of estimation (see lavaan tutorial for details). How does that change your model?
+```{r}
+
+```
+
+#—-NEW QUESTIONS—-
+
+# 10. Test measurement invariance across time for your construct. Can you run growth models? If there is evidence of non-invariance, what seems to be the problem?
+```{r}
+
+```
+
+
+# 11. Fit a second order growth model. Compare and contrast the estimates with the normal latent growth model.
+```{r}
+
+```
+
+
+# 12. Fit a series of multiple group models. Constrain some parameters and compare the fit.
+```{r}
+
+```
+
