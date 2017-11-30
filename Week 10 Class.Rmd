@@ -1,0 +1,59 @@
+---
+title: "Week 10 Class"
+author: "Molly Farry-Thorn"
+date: "November 2, 2017"
+output: pdf_document
+---
+Look at bivariate corrlation - to make sure there is a latent variable
+High correlation among the indicators
+True score variance, shared across those indicators.
+For each of the indicators - there are means and variance - tends not to converge if they are very different than each other.
+Covariance matrix isn't positive - out of bounds number. You have latent variable with negative error variance - likely means the variance is basically zero. If you have more than 2 latenet variables - you should have cross loadings or only one latent variable. But because the latent variables are a priori you get implied correlation that is greater than 1. 
+Lavaan has a data set you can work with.
+Rimsey - lower 0-.08
+CFI, TLI - higher
+Fit statistics better for model comparisons - not just on their own.
+
+Do the 3 latent variables stay the same. 
+Look at the correlations between each. 
+
+Pos1 ~~ 0*Neg3 - don't want these correlations
+std.lv - standardizes your latent variable - allows all factors to load how they want but restricts variance to 1.
+Residuals are sig, something left over after latent variables. To test variance use marker variable (not fixed)
+
+Controlling for time 1 how much variablity left at time 2. Whatever is unique at each time point.
+To override defaults - put in NA
+No lables - no quality constraints. 
+The relationship at time 2 that is not explained by either variable at time 1
+
+# Longitudinal mediation model
+X -> M -> Y
+Controlling for previous times. Predicting Y, controlling for previous Y. More stringent test.
+Need 3 time points, but more would be better.
+measured extraversion at time 1 and expecting to be constant - doesn't need to be controlling for anything else.
+Correlate between satisfaction (not latent) and connection variables, and extraversion
+Describe your regression paths. Have paths have the same association. Every same type of path is contrained to be equal.
+Creating latent variable of extraversion
+Social Connection predicted by extraversion and well-being
+Extraversion predicts connect and they're all defined by "a" (you have a1, a2, a3)
+subjective well-being predicting connect (cross-lag) are "d"s
+social connection predicting connect are "m"s
+subjective well-being predicting subj well-being "y"s
+Extraversion predicting well-being (x predicting y) are "c"s
+social connection predicting subj well-being are "b"s 
+Each letter is a type of relationship
+indirect a*b
+direct - x to y that cannot be explained by mediators
+a1 * b2 * y3
+trace all possible paths to get to the end - to get indirect effects estimate
+total: add all the c time y paths (x predicting y and the auto-correlations)
+calculate a new parameter - create new parameter based on previous parameters (those labels)
+
+GROWTH MODELS WITH SEM
+More precise, without measurement error 
+Within an assement point we can get a better assessment using latent variables
+intercept is at T1
+controlling for x1 and x2
+if we center, you now have an interaction (with time) - the lower level effects change
+  slope value now at average value of x1 and x2 (not zero level)
+Can add time-varying covariates and have different relationships at each time point
