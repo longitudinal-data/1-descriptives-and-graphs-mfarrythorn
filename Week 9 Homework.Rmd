@@ -17,16 +17,16 @@ library(tidyr)
 library(plyr)
 
 # Set up my data
-Chicago <- read.delim("CTOPP & WJ scores.csv", header=TRUE, sep=",")
-Chicago.wide <- gather(Chicago, Var, Val, select=c("Age", "Age.c", "Timepoint", "ctopp_el_raw", "ctopp_nr_raw", "ctopp_sm_raw", "wj_wordid_raw", "wj_wordattack_raw","wj_wordid_standard")) %>%
+Chicago <- read.delim("12.15 CTOPP & WJ scores.csv", header=TRUE, sep=",")
+Chicago.wide <- gather(Chicago, Var, Val, select=c("Age", "Age.c", "Timepoint", "ctopp_el_raw", "ctopp_nr_raw", "ctopp_sm_raw", "wj_wordid_raw", "wj_wordattack_raw","wj_wordid_standard", "Sex")) %>%
            unite(VarG, Var, Grade) %>%
            spread(VarG, Val)
 names(Chicago.wide)[1] <- "Participant"
-Chicago.wide <- Chicago.wide[,c(1,8:9,6:7,4:5,2:3,24:25,22:23,
-                                12,16,20,28,32,36,
-                                13,17,21,29,33,37,
-                                10,14,18,26,30,34,
-                                11,15,19,27,31,35)]
+Chicago.wide <- Chicago.wide[,c(1,8:9,6:7,4:5,2:3,24:25,22:23,28:29,26:27,
+                                12,16,20,32,36,40,
+                                13,17,21,33,37,41,
+                                10,14,18,30,34,38,
+                                11,15,19,31,35,39)]
 names(Chicago)[1] <- "Participant"
 
 ```
@@ -58,7 +58,7 @@ semPaths(fit.2, layout = "tree", whatLabels = "est")
 ```
 Under the marker method, parameter estimates (means) were fixed at 1 for the first indicators (i.e. ctopp_el_raw_KG_1 and wj_wordid_raw_KG_1). 
 
-Under the fixed factor method, in contrast, parameter estiamtes (variances) were fixed to 1 for the latent variables (i.e. phonemic and reading). 
+Under the fixed factor method, in contrast, parameter estimates (variances) were fixed to 1 for the latent variables (i.e. phonemic and reading). 
 
 In both cases, fit indices (e.g., logLikelihood, TLI, CFI, RMSEA) remain constant.
 
@@ -88,7 +88,7 @@ mod.3 <- '
           ctopp_sm_raw_KG_1 ~~ ctopp_sm_raw_KG_3 + ctopp_sm_raw_FG_1
           ctopp_sm_raw_KG_3 ~~ ctopp_sm_raw_FG_1'
 
-fit.3 <- cfa(mod.3,data = Chicago.wide, std.lv = TRUE)
+fit.3 <- cfa(mod.3,data = Chicago.wide, meanstructure=TRUE, std.lv = TRUE)
 summary(fit.3, standardized=TRUE, fit.measures=TRUE)
 semPaths(fit.3, whatLabels = "std")
 
@@ -117,8 +117,8 @@ fit.4 <- sem(mod.4, data=Chicago.wide, std.lv = TRUE)
 summary(fit.4, fit.measures = TRUE)
 semPaths(fit.4, whatLabels = "std")
 ```
-For the longitudinal CFA model with correlated latent fators (mod.3), I conclude that my latent factors are
-strongly correlated across time. Moreover, across all three timepoints, indicators load strongly & significantly
+For the longitudinal CFA model with correlated latent factors (mod.3), I conclude that my latent factors are
+strongly correlated across time. Moreover, across all three time points, indicators load strongly & significantly
 onto their respective latent constructs.
 For the autoregressive CFA model (mod.4), a similar picture emerges, suggesting that Semantic_1 is
 highly predictive of Semantic_2, which is highly predictive of Semantic_3. Of note, standardized variances
@@ -183,47 +183,216 @@ anova(mod.SEM.random, mod.SEM.fixed)
 ```
 
 
-Constraining slopes to be fixed does not sigificantly change my model (p = .78).
+Constraining slopes to be fixed does not significantly change my model (p = .78).
 
 # 7. Change the time metric in your SEM growth model. How does that change your estimates? Does it change your fit statistics?
-changed my time metric such that the intercept was centered at TP 3 rather than TP1. This increased the
-intercept (which makes sense, given age-related change) but did not change model fit.
-I also changed my time metric such that “duration” between TP3 & TP2 > “duration” between TP2 & TP1.
-This had little impact on the intercept, but decreased the slope and improved model fit.
+changed my time metric such that the intercept was centered at the end of first grade rather than at the beginning of kindergarten. This increased the intercept from around 17.5 to 38.8 (which makes sense, given age-related change) but the slope did not change much and model fit did not change.
+
 ```{r}
-# mydata_wide$time_1 <- 0
-# mydata_wide$time_2 <- as.numeric(mydata_wide$Age_at_time_of_testing_2) -
-# as.numeric(mydata_wide$Age_at_time_of_testing_1)
-# mydata_wide$time_3 <- as.numeric(mydata_wide$Age_at_time_of_testing_3) -
-# as.numeric(mydata_wide$Age_at_time_of_testing_1)
 mod.SEM4 <- 'intercept =~ 1*wj_wordid_raw_KG_1 + 1*wj_wordid_raw_KG_3 + 1*wj_wordid_raw_FG_1 + 1*wj_wordid_raw_FG_3
-             slope =~ -2*Sem_TotalCorrect_1 + -1*Sem_TotalCorrect_2 + 0*Sem_TotalCorrect_3 '
+             slope =~ -3*wj_wordid_raw_KG_1 + -2*wj_wordid_raw_KG_3 + -1*wj_wordid_raw_FG_1 + 0*wj_wordid_raw_FG_3'
 mod.SEM.time <- growth(mod.SEM4, missing = "ML", data = Chicago.wide)
 summary(mod.SEM.time)
+
+anova(mod.SEM.random, mod.SEM.time)
+
 ```
 
 
 # 8. Try a different type of estimation (see lavaan tutorial for details). How does that change your model?
+Changing the estimator to MLR did not change the estimates. Instead, it changes the standard errors. And it added an extra "Robust" column to the fit statistics to indicate the robust goodness of fit.
 ```{r}
+mod.SEM.random.MLR <- growth(mod.SEM2, missing = "ML", estimator = "MLR", data = Chicago.wide)
+summary(mod.SEM.random)
+summary(mod.SEM.random.MLR)
 
 ```
 
 #—-NEW QUESTIONS—-
 
 # 10. Test measurement invariance across time for your construct. Can you run growth models? If there is evidence of non-invariance, what seems to be the problem?
-```{r}
+The config model fits significantly better than the weak model and the cfi decreases by more than .01, suggesting measurement invariance.
+```{r, warning = FALSE}
+
+config.fit <- fit.3
+
+summary(config.fit, standardized = TRUE, fit.measures = T)
+semPaths(config.fit)
+
+# Weak - constrain factor loadings to be the same across time
+
+weak <- '
+## define latent variables, constrain factor loadings
+          Phonemic_t1 =~ L1*ctopp_el_raw_KG_1 + L2*ctopp_nr_raw_KG_1 + L3*ctopp_sm_raw_KG_1 
+          Phonemic_t2 =~ L1*ctopp_el_raw_KG_3 + L2*ctopp_nr_raw_KG_3 + L3*ctopp_sm_raw_KG_3
+          Phonemic_t3 =~ L1*ctopp_el_raw_FG_1 + L2*ctopp_nr_raw_FG_1 + L3*ctopp_sm_raw_FG_1
+
+## free latent variances at later times
+Phonemic_t2 ~~ NA*Phonemic_t2
+Phonemic_t3 ~~ NA*Phonemic_t3
+
+## correlated residuals across time
+          ctopp_el_raw_KG_1 ~~ ctopp_el_raw_KG_3 + ctopp_el_raw_FG_1
+          ctopp_el_raw_KG_3 ~~ ctopp_el_raw_FG_1
+          ctopp_nr_raw_KG_1 ~~ ctopp_nr_raw_KG_3 + ctopp_nr_raw_FG_1
+          ctopp_nr_raw_KG_3 ~~ ctopp_nr_raw_FG_1
+          ctopp_sm_raw_KG_1 ~~ ctopp_sm_raw_KG_3 + ctopp_sm_raw_FG_1
+          ctopp_sm_raw_KG_3 ~~ ctopp_sm_raw_FG_1'
+
+weak.fit <- cfa(weak, data=Chicago.wide, meanstructure=TRUE, std.lv=TRUE)
+
+summary(weak.fit, standardized=TRUE, fit.measures=TRUE)
+semPaths(weak.fit)
+
+# Strong - constrain means/intercepts of indicators to be equal
+
+strong <- '
+## define latent variables, constrain factor loadings
+          Phonemic_t1 =~ L1*ctopp_el_raw_KG_1 + L2*ctopp_nr_raw_KG_1 + L3*ctopp_sm_raw_KG_1 
+          Phonemic_t2 =~ L1*ctopp_el_raw_KG_3 + L2*ctopp_nr_raw_KG_3 + L3*ctopp_sm_raw_KG_3
+          Phonemic_t3 =~ L1*ctopp_el_raw_FG_1 + L2*ctopp_nr_raw_FG_1 + L3*ctopp_sm_raw_FG_1
+
+## free latent variances at later times
+Phonemic_t2 ~~ NA*Phonemic_t2
+Phonemic_t3 ~~ NA*Phonemic_t3
+
+
+## correlated residuals across time
+          ctopp_el_raw_KG_1 ~~ ctopp_el_raw_KG_3 + ctopp_el_raw_FG_1
+          ctopp_el_raw_KG_3 ~~ ctopp_el_raw_FG_1
+          ctopp_nr_raw_KG_1 ~~ ctopp_nr_raw_KG_3 + ctopp_nr_raw_FG_1
+          ctopp_nr_raw_KG_3 ~~ ctopp_nr_raw_FG_1
+          ctopp_sm_raw_KG_1 ~~ ctopp_sm_raw_KG_3 + ctopp_sm_raw_FG_1
+          ctopp_sm_raw_KG_3 ~~ ctopp_sm_raw_FG_1
+
+## constrain intercepts across time
+ctopp_el_raw_KG_1 ~ A*1
+ctopp_nr_raw_KG_1 ~ B*1
+ctopp_sm_raw_KG_1 ~ C*1
+
+ctopp_el_raw_KG_3 ~ A*1
+ctopp_nr_raw_KG_3 ~ B*1
+ctopp_sm_raw_KG_3 ~ C*1
+
+ctopp_el_raw_FG_1 ~ A*1
+ctopp_nr_raw_FG_1 ~ B*1
+ctopp_sm_raw_FG_1 ~ C*1
+
+##free latent means at later times
+          Phonemic_t2 ~ NA*1
+          Phonemic_t3 ~ NA*1'
+
+strong.fit <- cfa(strong, data=Chicago.wide, meanstructure=TRUE, std.lv=TRUE)
+
+summary(strong.fit, standardized=TRUE, fit.measures=TRUE)
+
+semPaths(strong.fit)
+
+anova(config.fit, weak.fit)
+anova(weak.fit, strong.fit)
+
+fitmeasures(config.fit)['cfi']
+fitmeasures(weak.fit)['cfi']
+fitmeasures(strong.fit)['cfi']
 
 ```
 
 
 # 11. Fit a second order growth model. Compare and contrast the estimates with the normal latent growth model.
-```{r}
+Overall the estimates are not that different. The estimates of the first order model vs. the second order model:
+
+Intercept: 6.734 vs. 7.445
+Slope: 1.426 vs. 1.696
+```{r, warning = FALSE}
+sec.order <- '
+## define latent variables
+          Phonemic_t1 =~ NA*L1*ctopp_el_raw_KG_1 + L1*ctopp_el_raw_KG_1 + L2*ctopp_nr_raw_KG_1 + L3*ctopp_sm_raw_KG_1 
+          Phonemic_t2 =~ NA*L1*ctopp_el_raw_KG_3 + L1*ctopp_el_raw_KG_3 + L2*ctopp_nr_raw_KG_3 + L3*ctopp_sm_raw_KG_3
+          Phonemic_t3 =~ NA*L1*ctopp_el_raw_FG_1 + L1*ctopp_el_raw_FG_1 + L2*ctopp_nr_raw_FG_1 + L3*ctopp_sm_raw_FG_1
+
+
+## intercepts
+ctopp_el_raw_KG_1 ~ A*1
+ctopp_nr_raw_KG_1 ~ B*1
+ctopp_sm_raw_KG_1 ~ C*1
+
+ctopp_el_raw_KG_3 ~ A*1
+ctopp_nr_raw_KG_3 ~ B*1
+ctopp_sm_raw_KG_3 ~ C*1
+
+ctopp_el_raw_FG_1 ~ A*1
+ctopp_nr_raw_FG_1 ~ B*1
+ctopp_sm_raw_FG_1 ~ C*1
+
+
+## correlated residuals across time
+          ctopp_el_raw_KG_1 ~~ ctopp_el_raw_KG_3 + ctopp_el_raw_FG_1
+          ctopp_el_raw_KG_3 ~~ ctopp_el_raw_FG_1
+          ctopp_nr_raw_KG_1 ~~ ctopp_nr_raw_KG_3 + ctopp_nr_raw_FG_1
+          ctopp_nr_raw_KG_3 ~~ ctopp_nr_raw_FG_1
+          ctopp_sm_raw_KG_1 ~~ ctopp_sm_raw_KG_3 + ctopp_sm_raw_FG_1
+          ctopp_sm_raw_KG_3 ~~ ctopp_sm_raw_FG_1
+
+
+## latent variable intercepts
+Phonemic_t1  ~ 0*1
+Phonemic_t2  ~ 0*1
+Phonemic_t3  ~ 0*1
+
+#model constraints for effect coding
+## loadings must average to 1
+L1 == 3 - L2 - L3
+## means must average to 0
+A == 0 - B - C
+
+i =~ 1*Phonemic_t1 + 1*Phonemic_t2 + 1*Phonemic_t3 
+s =~ 0*Phonemic_t1 + 1*Phonemic_t2 + 2*Phonemic_t3 '
+
+fit.sec.order <- growth(sec.order, data=Chicago.wide, meanstructure = TRUE, missing = "ML")
+
+summary(fit.sec.order, fit.measures=TRUE)
+
+#Normal latent growth model
+first.order <- '
+              i =~ 1*ctopp_el_raw_KG_1 + 1*ctopp_nr_raw_KG_1 + 1*ctopp_sm_raw_KG_1 +
+                   1*ctopp_el_raw_KG_3 + 1*ctopp_nr_raw_KG_3 + 1*ctopp_sm_raw_KG_3 +
+                   1*ctopp_el_raw_FG_1 + 1*ctopp_nr_raw_FG_1 + 1*ctopp_sm_raw_FG_1
+              s =~ 0*ctopp_el_raw_KG_1 + 0*ctopp_nr_raw_KG_1 + 0*ctopp_sm_raw_KG_1 +
+                   1*ctopp_el_raw_KG_3 + 1*ctopp_nr_raw_KG_3 + 1*ctopp_sm_raw_KG_3 +
+                   2*ctopp_el_raw_FG_1 + 2*ctopp_nr_raw_FG_1 + 2*ctopp_sm_raw_FG_1'
+
+fit.first.order <- growth(first.order, data=Chicago.wide, meanstructure = TRUE, missing = "ML")
+summary(fit.first.order, fit.measures=TRUE)
 
 ```
 
 
 # 12. Fit a series of multiple group models. Constrain some parameters and compare the fit.
 ```{r}
+group1 <- '
+## define latent variables
+          Phonemic_t1 =~ ctopp_el_raw_KG_1 + ctopp_nr_raw_KG_1 + ctopp_sm_raw_KG_1 
+          Phonemic_t2 =~ ctopp_el_raw_KG_3 + ctopp_nr_raw_KG_3 + ctopp_sm_raw_KG_3
+          Phonemic_t3 =~ ctopp_el_raw_FG_1 + ctopp_nr_raw_FG_1 + ctopp_sm_raw_FG_1
 
+## correlated residuals across time
+          ctopp_el_raw_KG_1 ~~ ctopp_el_raw_KG_3 + ctopp_el_raw_FG_1
+          ctopp_el_raw_KG_3 ~~ ctopp_el_raw_FG_1
+          ctopp_nr_raw_KG_1 ~~ ctopp_nr_raw_KG_3 + ctopp_nr_raw_FG_1
+          ctopp_nr_raw_KG_3 ~~ ctopp_nr_raw_FG_1
+          ctopp_sm_raw_KG_1 ~~ ctopp_sm_raw_KG_3 + ctopp_sm_raw_FG_1
+          ctopp_sm_raw_KG_3 ~~ ctopp_sm_raw_FG_1
+
+Phonemic_t1 ~~ NA*Phonemic_t2 + NA*Phonemic_t3
+Phonemic_t2 ~~ c(1,1)*Phonemic_t3'
+
+
+fit.group.1 <- cfa(group1, data=Chicago.wide, std.lv=TRUE, group = "Sex_KG_1")
+
+summary(fit.group.1, standardized=TRUE, fit.measures=TRUE)
+
+fit.group.2 <- cfa(group1, data=Chicago.wide, std.lv=TRUE, group = "Sex_KG_1", group.equal = c("loadings", "intercepts"))
+summary(fit.group.2)
+anova(fit.group.1, fit.group.2)
 ```
 
