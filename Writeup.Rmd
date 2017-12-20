@@ -1,0 +1,83 @@
+---
+title: "Final analysis"
+author: "Molly Farry-Thorn"
+date: "December 15, 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, include=FALSE}
+library(tidyverse)
+library(lme4)
+library(lmerTest)
+library(ggplot2)
+library(sjPlot)
+letters <- read.delim("Child Outcomes.csv", header=TRUE, sep=",")
+letters$Subject <- as.factor(letters$Subject)
+letters$Prop.Letters <- letters$Utterances.with.Letters/letters$Utterances
+letters$Prop.Letters <- sqrt(letters$Prop.Letters)
+letters$Utterances <- sqrt(letters$Utterances)
+letters$Utterances.with.Letters <- sqrt(letters$Utterances.with.Letters)
+letters$Parent.input <- sqrt(letters$Parent.input)
+letters$WJ.KG1 <- sqrt(letters$WJ.KG1)
+letters$Age.c <- letters$Age-3
+letters$Age.sq <- letters$Age.c^2
+letters$Age.cu <- letters$Age.c^3
+
+cor(letters$SES, letters$Parent.input)
+
+```
+
+```{r}
+m1.1 <- lmer(Utterances.with.Letters ~ 1 + Age.c + (Age.c | Subject), data=letters)
+summary(m1.1)
+
+m1.2 <- lmer(Utterances.with.Letters ~ 1 + Age.c + Age.sq + (Age.c + Age.sq | Subject), data=letters)
+summary(m1.2)
+
+anova(m1.1,m1.2)
+
+m1.3 <- lmer(Utterances.with.Letters ~ 1 + Age.c + Age.sq + Age.cu + (Age.c + Age.sq + Age.cu| Subject), data=letters)
+summary(m1.3)
+
+anova(m1.1,m1.3)
+
+m1.4 <- lmer(Utterances.with.Letters ~  1 + Age.c + Age.sq + Age.cu + SES + SES*Age.c + SES*Age.sq + SES*Age.cu + (Age.c | Subject), data=letters)
+summary(m1.4)
+
+anova(m1.3,m1.4)
+
+m1.5 <- lmer(Utterances.with.Letters ~  1 + Age.c + Age.sq + Age.cu + Parent.input + Parent.input*Age.c + Parent.input*Age.sq + Parent.input*Age.cu + (Age.c | Subject), data=letters)
+summary(m1.5)
+
+anova(m1.3,m1.5)
+
+m1.6 <- lmer(Utterances.with.Letters ~ 1 + Age.c + Age.sq + Age.cu + Utterances + Utterances*Age.c + Utterances*Age.sq + Utterances*Age.cu + (Age.c| Subject), data=letters)
+summary(m1.6)
+
+anova(m1.2,m1.6)
+```
+
+```{r}
+m2.1 <- lmer(Prop.Letters ~ 1 + Age.c + (Age.c | Subject), data=letters)
+summary(m2.1)
+
+m2.2 <- lmer(Prop.Letters ~ 1 + Age.c + Age.sq + (Age.c | Subject), data=letters)
+summary(m2.2)
+
+anova(m2.1,m2.2)
+
+m2.3 <- lmer(Prop.Letters ~  1 + SES*Age.c + (Age.c | Subject), data=letters)
+summary(m2.3)
+
+anova(m2.1,m2.3)
+
+m2.4 <- lmer(Prop.Letters ~  1 + Parent.input*Age.c + (Age.c | Subject), data=letters)
+summary(m2.4)
+
+anova(m2.1,m2.4)
+```
+
